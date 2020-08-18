@@ -129,19 +129,16 @@ cases by using the following as its cache key:
 3. The AWS access key ID - found in the `AWS_ACCESS_KEY_ID` environment
 variable.
 
-Kubecredcache stores the cached credentials in YAML files in its
-`~/.kubecredcache` directory. The cache files are named according to the
-cluster name/id: `cache-<CLUSTER_NAME>.yaml`. They contain a mapping from the
-cache key to the cached credentials.
+Kubecredcache stores the cached credentials in files in its `~/.kubecredcache`
+directory. The cache files are named according to the cache key:
+`<CLUSTER_NAME>_<AWS_ACCESS_KEY_ID>_<REGION>.yaml`. They contain the cached
+credentials.
 
 ### 🗑 Garbage Collection
 
 Every time kubecredcache runs, it scans the cache directory `~/.kubecredcache`
 for cache files that haven't been written in more than 20 minutes (by default).
 If any such files are found, they're deleted.
-
-When kubecredcache writes a token to a cache file, it checks the tokens for
-other cache keys in the file and removes them if they're expired.
 
 ### Appendix
 
