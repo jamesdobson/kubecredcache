@@ -53,13 +53,13 @@ func main() {
 
 	commandName := os.Args[1]
 	commandArgs := os.Args[2:]
-	accessKeyId := os.Getenv(AccessKeyEnvVarName)
+	accessKeyID := os.Getenv(AccessKeyEnvVarName)
 
-	if accessKeyId == "" {
+	if accessKeyID == "" {
 		log.Fatalf("%s environment variable is not set\n", AccessKeyEnvVarName)
 	}
 
-	key := getCacheKey(commandName, commandArgs, accessKeyId)
+	key := getCacheKey(commandName, commandArgs, accessKeyID)
 	data := getCacheData(key)
 	var expired bool = false
 
