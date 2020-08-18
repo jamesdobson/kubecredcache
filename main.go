@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -53,6 +54,18 @@ func main() {
 
 	commandName := os.Args[1]
 	commandArgs := os.Args[2:]
+
+	switch commandName {
+	case "--install":
+		install(commandArgs)
+	default:
+		mainAction(commandName, commandArgs)
+	}
+
+	os.Exit(0)
+}
+
+func mainAction(commandName string, commandArgs []string) {
 	accessKeyID := os.Getenv(AccessKeyEnvVarName)
 
 	if accessKeyID == "" {
@@ -92,7 +105,7 @@ func main() {
 	output := run(commandName, commandArgs)
 
 	putCacheData(output, key)
-	os.Exit(0)
+	log.Printf("⚡️  token is now cached!\n")
 }
 
 func getCacheFileName(key CacheKey) string {
@@ -276,4 +289,51 @@ func initialize() {
 			log.Fatalf("Error reading '%s': %v\n", viper.ConfigFileUsed(), err)
 		}
 	}
+}
+
+func install(args []string) {
+	if len(args) != 1 {
+		log.Fatalf("The --install command takes one and only one argument: the path to the kubeconfig file\n")
+	}
+
+	configFileName := args[0]
+	data, err := ioutil.ReadFile(configFileName)
+	if err != nil {
+		log.Fatalf("Unable to open file '%s': %v\n", configFileName, err)
+	}
+
+	m := make(map[interface{}]interface{})
+	err = yaml.Unmarshal(data, &m)
+	if err != nil {
+		log.Fatalf("Unable to process file '%s': %v\n", configFileName, err)
+	}
+
+	// modify to use this program
+	users := m["users"].([]interface{})
+	userEntry := users[0].(map[interface{}]interface{})
+	user := userEntry["user"].(map[interface{}]interface{})
+	exec := user["exec"].(map[interface{}]interface{})
+	command := exec["command"].(string)
+
+	if command == ProgramName {
+		log.Fatalf("%s is already installed in '%s'\n", ProgramName, configFileName)
+	}
+
+	exec["command"] = ProgramName
+	commandArgs := exec["args"].([]interface{})
+	commandArgs = append([]interface{}{command}, commandArgs...)
+	exec["args"] = commandArgs
+
+	// write back to the file
+	data, err = yaml.Marshal(&m)
+	if err != nil {
+		log.Fatalf("Unable to marshal: %v\n", err)
+	}
+
+	err = ioutil.WriteFile(configFileName, data, 0600)
+	if err != nil {
+		log.Fatalf("Unable to write file '%s': %v\n", configFileName, err)
+	}
+
+	log.Printf("✅  %s installed in '%s'.\n", ProgramName, configFileName)
 }
