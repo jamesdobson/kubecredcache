@@ -2,23 +2,47 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path"
+	"time"
 
 	"github.com/spf13/viper"
 )
 
 const (
-	ProgramName = "kubecredcache"
+	ProgramName          = "kubecredcache"
+	ExpireEarlyBySeconds = 120
+	AccessKeyEnvVarName  = "AWS_ACCESS_KEY_ID"
 )
 
 var (
 	configDir string
 )
+
+// TODO: Implement garbage collection of cache directory
+
+type CacheKey struct {
+	ClusterID string
+	Region    string
+	AccessKey string
+}
+
+type AWSCacheEntry struct {
+	Kind       string
+	APIVersion string
+	Status     AWSCacheEntryStatus
+}
+
+type AWSCacheEntryStatus struct {
+	ExpirationTimestamp string
+	Token               string
+}
 
 func main() {
 	initialize()
@@ -27,30 +51,145 @@ func main() {
 		log.Fatalf("%s requires at least one argument.", ProgramName)
 	}
 
-	var commandName = os.Args[1]
-	var commandArgs = os.Args[2:]
+	commandName := os.Args[1]
+	commandArgs := os.Args[2:]
+	accessKeyId := os.Getenv(AccessKeyEnvVarName)
 
-	data := getCacheData()
-
-	if data != "" {
-		log.Println("⚡️  Cache hit; enjoy!")
-		_, err := os.Stdout.WriteString(data)
-		if err != nil {
-			log.Fatalf("Error returning cached data: %v\n", err)
-		}
-
-		os.Exit(0)
+	if accessKeyId == "" {
+		log.Fatalf("%s environment variable is not set\n", AccessKeyEnvVarName)
 	}
 
-	log.Printf("🐢  Cache miss; calling '%s'...\n", commandName)
+	key := getCacheKey(commandName, commandArgs, accessKeyId)
+	data := getCacheData(key)
+	var expired bool = false
+
+	if data != "" {
+		expired = isExpired(data)
+
+		if !expired {
+			log.Printf("⚡️  %s cache hit; enjoy!\n", ProgramName)
+
+			_, err := os.Stdout.WriteString(data)
+
+			if err != nil {
+				log.Fatalf("Error returning cached data: %v\n", err)
+			}
+
+			os.Exit(0)
+		}
+	}
+
+	var missReason string
+
+	if expired {
+		missReason = "token expired"
+	} else {
+		missReason = "cache empty"
+	}
+
+	log.Printf("🐢  %s cache miss (%s); calling '%s'...\n", ProgramName, missReason, commandName)
 
 	output := run(commandName, commandArgs)
 
-	putCacheData(output)
+	putCacheData(output, key)
+	os.Exit(0)
 }
 
-func getCacheData() string {
-	data, err := ioutil.ReadFile(path.Join(configDir, "cache.bin"))
+func getCacheFileName(key CacheKey) string {
+	if key.ClusterID == "" || key.AccessKey == "" {
+		log.Fatalf("CacheKey (%v) is missing required fields\n", key)
+	}
+
+	if key.Region == "" {
+		return fmt.Sprintf("%s_%s", key.ClusterID, key.AccessKey)
+	}
+
+	return fmt.Sprintf("%s_%s_%s", key.ClusterID, key.AccessKey, key.Region)
+}
+
+func getCacheKey(command string, args []string, id string) CacheKey {
+	if id == "" {
+		log.Panicln("Unable to determine user access key id")
+	}
+
+	key := parseCacheKey(command, args)
+	key.AccessKey = id
+
+	if key.ClusterID == "" {
+		log.Fatalf("Unable to determine cluster id from command: %s %v\n", command, args)
+	}
+
+	return key
+}
+
+func parseCacheKey(command string, args []string) CacheKey {
+	var key = CacheKey{}
+
+	if command == "aws" {
+		for i := 0; i < len(args); i++ {
+			arg := args[i]
+
+			if arg == "--region" {
+				i++
+
+				if i < len(args) {
+					key.Region = args[i]
+				}
+			} else if arg == "--cluster-name" {
+				i++
+
+				if i < len(args) {
+					key.ClusterID = args[i]
+				}
+			}
+		}
+	} else if command == "aws-iam-authenticator" {
+		for i := 0; i < len(args); i++ {
+			arg := args[i]
+
+			if arg == "-i" || arg == "--cluster-id" {
+				i++
+
+				if i < len(args) {
+					key.ClusterID = args[i]
+				}
+			}
+		}
+	}
+
+	return key
+}
+
+func isExpired(data string) bool {
+	ts := parseExpiry(data)
+
+	return ts.Unix()-time.Now().Unix() < ExpireEarlyBySeconds
+}
+
+func parseExpiry(data string) *time.Time {
+	var cacheEntry AWSCacheEntry
+	err := json.Unmarshal([]byte(data), &cacheEntry)
+
+	if err != nil {
+		log.Printf("Unable to parse cache entry: %v\n", err)
+		return nil
+	}
+
+	timestamp := cacheEntry.Status.ExpirationTimestamp
+
+	ts, err := time.Parse(time.RFC3339, timestamp)
+
+	if err != nil {
+		log.Printf("Unable to parse expiration timestamp ('%s'): %v\n", timestamp, err)
+		return nil
+	}
+
+	return &ts
+}
+
+func getCacheData(key CacheKey) string {
+	fileName := getCacheFileName(key)
+	data, err := ioutil.ReadFile(path.Join(configDir, fileName))
 
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -63,8 +202,9 @@ func getCacheData() string {
 	return string(data)
 }
 
-func putCacheData(output string) {
-	f, err := os.Create(path.Join(configDir, "cache.bin"))
+func putCacheData(output string, key CacheKey) {
+	fileName := getCacheFileName(key)
+	f, err := os.Create(path.Join(configDir, fileName))
 
 	if err != nil {
 		log.Fatalf("Error opening cache for writing: %v\n", err)
