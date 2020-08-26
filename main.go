@@ -17,16 +17,18 @@ import (
 )
 
 const (
-	ProgramName          = "kubecredcache"
-	ExpireEarlyBySeconds = 120
-	AccessKeyEnvVarName  = "AWS_ACCESS_KEY_ID"
+	ProgramName                 = "kubecredcache"
+	ExpireEarlyBySeconds        = 120
+	AccessKeyEnvVarName         = "AWS_ACCESS_KEY_ID"
+	CacheFileGCThresholdSeconds = 20 * 60
 )
 
 var (
 	configDir string
 )
 
-// TODO: Implement garbage collection of cache directory
+// TODO: Implement build and test/lint
+// TODO: Publish to Homebrew
 
 type CacheKey struct {
 	ClusterID string
@@ -47,6 +49,7 @@ type AWSCacheEntryStatus struct {
 
 func main() {
 	initialize()
+	gc()
 
 	if len(os.Args) <= 1 {
 		log.Fatalf("%s requires at least one argument.", ProgramName)
@@ -336,4 +339,23 @@ func install(args []string) {
 	}
 
 	log.Printf("✅  %s installed in '%s'.\n", ProgramName, configFileName)
+}
+
+func gc() {
+	files, err := ioutil.ReadDir(configDir)
+	if err != nil {
+		log.Printf("%s gc failed: %v\n", ProgramName, err)
+		return
+	}
+
+	gcThreshold := time.Now().Unix() - CacheFileGCThresholdSeconds
+
+	for _, f := range files {
+		if f.ModTime().Unix() < gcThreshold {
+			err := os.Remove(path.Join(configDir, f.Name()))
+			if err != nil {
+				log.Printf("%s gc failed to remove '%s': %v\n", ProgramName, f.Name(), err)
+			}
+		}
+	}
 }
