@@ -38,14 +38,14 @@ brew install jamesdobson/kubecredcache/kubecredcache
 
 ## Using Kubecredcache
 
-To speed up your `kubectl` commands, edit your kubeconfig file to call
-`kubecredcache`, passing the previous authentication command to it. In general,
-the steps are:
+To speed up your `kubectl` commands, modify your kubeconfig file to call
+`kubecredcache`, passing the previous authentication command to it. You can do
+this with the `--install` command:
 
-1. Change `command` from `aws` or `aws-iam-authenticator` to `kubecredcache`.
-2. Add whatever used to be in `command` to the beginning of the `args` list.
-
-Here are examples for `aws` and `aws-iam-authenticator`.
+```bash
+kubecredcache --install $KUBECONFIG
+```
+Here are examples of what it does for `aws` and `aws-iam-authenticator`.
 
 ### Wrapping the `aws` Command
 
