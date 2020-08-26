@@ -25,4 +25,8 @@ deploy:
   on:
     tags: true
     condition: "$TRAVIS_OS_NAME = linux"
-    branch: master
+    branch: main
+
+env:
+  global:
+    secure: Pw9flMcwWYs+3dLT/Wk59v3FLvoAb3BBm75CFWCpsehJId0r10lzC/QFOzk3LJxTIysmxW6Xc04trk9pMgCygNdVRRtxk9+Zr1LXZfyyK9gwVLAbnN+EHgCfbBx8Xhvmu2TniuLrV3vQIg/reiCWBa/zM7YT3kzgAujonxCbiMHXH2EwqLb+BZz5QjfnTWyBY3Wx+7mi8zGS2+2Z6BZCtquplSW5SBkXNcpoDF+iPxS7XYPv3OhyU38dav30fIyM4ZL6m+MaEkC9mQLMzIqODfj0N/jZEQONawkVESAKf2RZos7YrFcGchcNkDBjy+7F7+PDv7lckjQgJDs11ZJRxr7LdxNCO521kRNsi+9wllp1TVRrUixxTzN46/O25hauLqqIaOQdYYsxUvy7CSkwTT8Q51jAHgBD/5Q5D5OdynHmfT/wMFOO6R0M+asTxwPorZlMUf/Cs9DWTR3paglvNA8LNkF2/cGBjE0mp/S27hlvX9F7qBCPKBD3rvUjDQf5LPCboYoYDqXjmUO2D8V3Nu26XjPoOmkVP2/aZ/PUkUdV+YsVwUUIOB4mvltLDjIzqtXRY/PrYBJfEgHKNpNDQEloTgjtG/63LbHovGAEtoEeSit5tkWlVCWRRSS82sksrKaiZxZHpic+wHDq4hO3U03pKuXngZbaRrjhmb9cLfw=
