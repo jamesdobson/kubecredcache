@@ -1,5 +1,9 @@
 # Kubecredcache ⚡️
 
+[![Build Status](https://travis-ci.org/jamesdobson/kubecredcache.svg?branch=main)](https://travis-ci.org/jamesdobson/kubecredcache)
+[![Coverage Status](https://coveralls.io/repos/github/jamesdobson/kubecredcache/badge.svg?branch=main)](https://coveralls.io/github/jamesdobson/kubecredcache?branch=main)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jamesdobson/kubecredcache)](https://goreportcard.com/report/github.com/jamesdobson/kubecredcache)
+
 Kubecredcache makes many `kubectl` operations faster when used with AWS EKS.
 
 When using EKS, many users have a Kubernetes configuration that runs either
