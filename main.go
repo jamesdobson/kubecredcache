@@ -269,7 +269,7 @@ func initialize() {
 
 	if _, err := os.Stat(configDir); err != nil {
 		if os.IsNotExist(err) {
-			err = os.MkdirAll(configDir, 0755)
+			err = os.MkdirAll(configDir, 0700)
 			if err != nil {
 				log.Fatalf("Unable to create configuration directory '%s': %v\n", configDir, err)
 			}
