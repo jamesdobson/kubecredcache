@@ -20,6 +20,8 @@ and caches the authentication token the first time `kubectl` is called.
 The cached token is used on subsequent invocations of `kubectl`, saving lots
 of time and making `kubectl` seem ⚡️peppier!
 
+[![asciicast](https://asciinema.org/a/355611.svg)](https://asciinema.org/a/355611)
+
 ## How to Install Kubecredcache
 
 ### 🍎 Mac OS X
