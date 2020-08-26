@@ -12,7 +12,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
 
@@ -276,20 +275,6 @@ func initialize() {
 			}
 		} else {
 			log.Fatalf("Error getting configuration directory '%s': %v", configDir, err)
-		}
-	}
-
-	viper.AddConfigPath(configDir)
-	viper.SetConfigName("config")
-	viper.SetEnvPrefix(ProgramName)
-	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err != nil {
-		switch err.(type) {
-		case viper.ConfigFileNotFoundError:
-			// missing config file is ok
-		default:
-			log.Fatalf("Error reading '%s': %v\n", viper.ConfigFileUsed(), err)
 		}
 	}
 }
